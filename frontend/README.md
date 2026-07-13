@@ -7,7 +7,7 @@ React + Tailwind ops dashboard for the LLMOps Gateway AI platform.
 ```bash
 cd frontend
 npm install
-npm run dev      # http://localhost:3001
+npm run dev      # http://localhost:3002
 ```
 
 Runs in **demo mode** by default — `src/lib/demoData.js` generates a live-feeling
