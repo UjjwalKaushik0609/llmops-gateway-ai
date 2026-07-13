@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: #0a0d12;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(91, 141, 239, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 100%, rgba(61, 214, 140, 0.05), transparent 40%);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #0a0d12; }
+::-webkit-scrollbar-thumb { background: #232a35; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2d3441; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.row-in { animation: row-in 0.35s ease-out; }
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.scan-line { animation: scan 2.5s linear infinite; }

@@ -1,0 +1,56 @@
+groups:
+  - name: llmops_alerts
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          rate(llmops_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanize }} errors/sec"
+
+      # High latency
+      - alert: HighLLMLatency
+        expr: |
+          histogram_quantile(0.95, rate(llmops_request_latency_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM latency is high (p95 > 30s)"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      # Cost spike
+      - alert: CostSpike
+        expr: |
+          rate(llmops_cost_usd_total[1h]) * 3600 > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cost spike detected: >$10/hour"
+          description: "Current cost rate: ${{ $value | humanize }}/hour"
+
+      # Security blocks surge
+      - alert: SecurityBlocksSurge
+        expr: |
+          rate(llmops_security_blocks_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of security blocks - possible attack"
+          description: "{{ $value }} blocks/min detected"
+
+      # Provider down
+      - alert: ProviderDown
+        expr: |
+          llmops_provider_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM provider {{ $labels.provider }} is down"

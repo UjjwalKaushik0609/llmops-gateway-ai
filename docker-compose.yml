@@ -1,0 +1,173 @@
+version: "3.9"
+
+# ─── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  llmops-network:
+    driver: bridge
+
+# ─── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  prometheus_data:
+  grafana_data:
+
+# ─── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: llmops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: llmops
+      POSTGRES_PASSWORD: llmops_pass
+      POSTGRES_DB: llmops_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - llmops-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llmops -d llmops_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: llmops-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - llmops-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── ChromaDB ────────────────────────────────────────────────────────────────
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: llmops-chromadb
+    restart: unless-stopped
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8001
+      - ANONYMIZED_TELEMETRY=false
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8001"
+    networks:
+      - llmops-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/v1/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: llmops-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://llmops:llmops_pass@postgres:5432/llmops_db
+      SYNC_DATABASE_URL: postgresql://llmops:llmops_pass@postgres:5432/llmops_db
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8001
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - llmops-network
+    volumes:
+      - ./backend:/app/backend  # hot reload in dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: llmops-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - llmops-network
+    depends_on:
+      - api
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: llmops-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: llmops_grafana
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - llmops-network
+    depends_on:
+      - prometheus
+
+  # ── Nginx Reverse Proxy (optional) ───────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: llmops-nginx
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - llmops-network
+    depends_on:
+      - api
+    profiles:
+      - production
