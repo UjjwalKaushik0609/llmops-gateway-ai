@@ -97,11 +97,13 @@ function Dashboard({ onLogout }) {
     setLastAnswer(null);
     animatePipeline();
     try {
-      const res = await completeLLM({
-        messages: [{ role: "user", content: text }],
-        routing_strategy: strategy === "auto" ? "manual" : strategy,
-        provider: strategy === "auto" ? undefined : activeProvider,
-      });
+    const res = await completeLLM({
+    messages: [{ role: "user", content: text }],
+    routing_strategy: strategy,
+    provider: activeProvider,
+    model: activeProvider === "gemini" ? "gemini-2.5-flash" : undefined,
+  });
+
       setLastAnswer(res.data);
       await refreshHistory();
     } catch (err) {

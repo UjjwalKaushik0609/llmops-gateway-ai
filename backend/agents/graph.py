@@ -14,7 +14,6 @@ from backend.models.schemas import LLMRequest, LLMResponse, Message, RoutingStra
 from backend.router.providers import LLMProviderRegistry, LLMProviderError
 from backend.router.token_utils import count_message_tokens, calculate_cost, optimize_prompt, estimate_request_cost
 from backend.security.auth import scan_prompt
-
 logger = structlog.get_logger()
 
 
@@ -69,6 +68,11 @@ def router_agent(state: AgentState) -> AgentState:
     logger.info("RouterAgent running", request_id=state["request_id"])
     request = state["request"]
     messages = state["sanitized_messages"]
+    print("=" * 60)
+    print("Routing Strategy :", request.routing_strategy)
+    print("Requested Provider:", request.provider)
+    print("Requested Model   :", request.model)
+    print("=" * 60)
 
     quality_scores = {
         "openai":     {"gpt-4o": 0.95, "gpt-4o-mini": 0.80},
@@ -171,6 +175,9 @@ def router_agent(state: AgentState) -> AgentState:
             model = list(quality_scores.get(provider, {"gemini-2.5-flash": 0}).keys())[0]
             reason += f" (fallback to {fallback})"
 
+    print("Selected Provider:", provider)
+    print("Selected Model   :", model)
+    print("Reason           :", reason)
     state["selected_provider"] = provider
     state["selected_model"] = model
     state["routing_reason"] = reason

@@ -3,6 +3,7 @@ Core LLM completion endpoints.
 Routes requests through the multi-agent LangGraph pipeline.
 """
 import inspect
+import traceback
 import uuid
 from datetime import datetime
 
@@ -37,6 +38,7 @@ async def complete(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    print("\n========== ENTERED /llm/complete ==========\n")    
     # Rate limit check
     allowed = await check_rate_limit(current_user.id, settings.rate_limit_per_minute)
     if not allowed:
@@ -85,11 +87,15 @@ async def complete(
         pipeline_kwargs = {
             key: value for key, value in pipeline_kwargs.items() if key in accepted_params
         }
+        print("\n========== BEFORE run_agent_pipeline ==========")
+        print("pipeline_kwargs =", pipeline_kwargs)
+        print("current_user.id =", current_user.id)
         response = await run_agent_pipeline(
             request,
             current_user.id,
             **pipeline_kwargs,
         )
+        print("\n========== AFTER run_agent_pipeline ==========")
     except HTTPException as e:
         # ── FIX: Persist blocked requests so they appear in the stream and counter ──
         if e.status_code == 400 and isinstance(e.detail, dict) and "flags" in e.detail:
@@ -117,10 +123,13 @@ async def complete(
             except Exception as db_err:
                 logger.warning("Failed to persist blocked request", error=str(db_err))
         raise
+    
+
     except Exception as e:
-        logger.error("Pipeline error", error=str(e), user_id=current_user.id)
+        traceback.print_exc()
+        logger.exception("Pipeline error", user_id=current_user.id)
         record_error("pipeline_error", "unknown")
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise
 
     # Persist request to database
     try:

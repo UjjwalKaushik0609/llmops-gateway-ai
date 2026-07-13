@@ -125,72 +125,26 @@ provider automatically if the primary fails.
 ```
 llmops-gateway-ai/
 ├── backend/
-│   ├── agents/            LangGraph multi-agent pipeline implementation
-│   │   └── graph.py       security, routing, token optimization, memory, executor, evaluator
-│   ├── api/               FastAPI endpoint modules and router configuration
-│   │   ├── routes/        route handlers for auth, LLM, analytics, keys, memory, providers, health
-│   │   └── __init__.py
-│   ├── config.py          application settings and environment loading
-│   ├── database/          SQLAlchemy async session and DB initialization
-│   ├── main.py            FastAPI app entrypoint and route registration
-│   ├── memory/            Redis caching and ChromaDB vector memory persistence
-│   ├── models/            ORM models, Pydantic schemas, and DB entities
-│   ├── observability/     Prometheus metrics export and instrumentation helpers
-│   ├── router/            provider client registry, fallback routing, token/cost utilities
-│   ├── security/          JWT auth, encryption, prompt scanning, API key resolution
-│   └── utils/             shared helper utilities
-├── frontend/              React + Vite admin console
-│   ├── public/            static assets served by Vite
-│   ├── src/               React app source
-│   │   ├── components/    UI components for login, request stream, provider settings, diagrams
-│   │   ├── lib/           client-side API helpers and demo data
-│   │   ├── App.jsx        main application shell
-│   │   ├── main.jsx       Vite entrypoint
-│   │   └── index.css      global styles
-│   ├── package.json       frontend dependencies and scripts
-│   └── vite.config.js     dev server proxy and build configuration
-├── infrastructure/        deployment and environment infrastructure
-│   ├── docker/            Docker Compose and Nginx init scripts
-│   ├── kubernetes/        manifests for deployment, service, ingress, HPA, PDB
-│   └── terraform/         AWS infrastructure definitions for EKS, RDS, ElastiCache, ECR
-├── monitoring/            observability configuration
-│   ├── grafana/           dashboards and provisioning definitions
-│   └── prometheus/        scrape config and alerting rules
-├── migrations/            Alembic DB migrations
-├── tests/                 unit and integration tests
-└── .github/               CI/CD workflows and automation
+│   ├── agents/         LangGraph multi-agent pipeline
+│   ├── api/routes/      auth, llm, analytics, keys, memory, health
+│   ├── router/          provider clients + cost/token utilities
+│   ├── memory/          Redis cache + ChromaDB vector store
+│   ├── security/        JWT, encryption, prompt/PII scanning
+│   ├── observability/   Prometheus metrics
+│   ├── database/        SQLAlchemy async session management
+│   └── models/          ORM models + Pydantic schemas
+├── frontend/             React + Tailwind ops console
+├── infrastructure/
+│   ├── docker/           nginx.conf, init.sql
+│   ├── kubernetes/       deployment, HPA, ingress, PDB
+│   └── terraform/        AWS EKS/RDS/ElastiCache/ECR
+├── monitoring/
+│   ├── prometheus/       scrape config + alert rules
+│   └── grafana/          dashboards + datasource provisioning
+├── migrations/           Alembic
+├── tests/                pytest suite
+└── .github/workflows/    CI/CD pipeline
 ```
-
-### What each folder does
-
-- `backend/`
-  - Hosts the API server, multi-agent pipeline, provider routing, database models, and security layers.
-  - The backend takes chat requests, routes them through security, selects a provider/model, calls the chosen LLM, records metrics, and persists request history.
-- `backend/agents/`
-  - Contains the LangGraph pipeline definition in `graph.py`.
-  - The pipeline runs a chain of agents: security scanning, routing, token optimization, optional memory/RAG, LLM execution, evaluation/post-processing.
-- `backend/api/routes/`
-  - Defines REST endpoints used by the frontend and external clients.
-  - Includes authentication, LLM completion, provider metadata, user key management, analytics, and health checks.
-- `backend/router/`
-  - Manages provider client selection and request cost/token utilities.
-  - Includes logic for provider fallback when a user or server key is unavailable.
-- `backend/memory/`
-  - Implements response caching in Redis and semantic memory storage in ChromaDB.
-  - Helps support conversational history and retrieval-augmented generation.
-- `backend/security/`
-  - Handles JWT auth, encrypted API keys, prompt/PII scanning, and user provider settings.
-- `frontend/`
-  - React + Tailwind UI for the operations console.
-  - Communicates with backend APIs under `/api/v1` and displays live request stream, provider selection, and analytics.
-- `infrastructure/`
-  - Contains deployment artifacts for Docker, Kubernetes, and Terraform-driven AWS infrastructure.
-- `monitoring/`
-  - Prometheus and Grafana configuration files for observability and alerting.
-- `migrations/`
-  - Alembic migrations for evolving the PostgreSQL schema.
-- `tests/`
-  - End-to-end and unit tests that verify backend behavior, API routes, and integration flows.
 
 ## Testing
 
