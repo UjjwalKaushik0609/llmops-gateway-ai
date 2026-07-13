@@ -286,7 +286,7 @@ make terraform-apply
 | FastAPI Docs | http://localhost:8000/docs |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 |
-| Frontend | http://localhost:3001 |
+| Frontend | http://localhost:3002 |
 
 ---
 
