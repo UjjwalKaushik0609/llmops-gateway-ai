@@ -74,6 +74,7 @@ def router_agent(state: AgentState) -> AgentState:
     print("Requested Model   :", request.model)
     print("=" * 60)
 
+
     quality_scores = {
         "openai":     {"gpt-4o": 0.95, "gpt-4o-mini": 0.80},
         "anthropic":  {"claude-3-5-sonnet-20241022": 0.97, "claude-3-haiku-20240307": 0.78},
@@ -258,6 +259,13 @@ async def llm_executor_agent(state: AgentState) -> AgentState:
     model = state["selected_model"]
     request = state["request"]
     retry_count = state.get("retry_count", 0)
+    print("=" * 60)
+    print("EXECUTOR")
+    print("Selected Provider :", provider)
+    print("Selected Model    :", model)
+    print("User Key Exists   :", bool(state.get("user_api_keys", {}).get(provider)))
+    print("Fallback Provider :", settings.fallback_provider)
+    print("=" * 60)
     try:
         user_key = state.get("user_api_keys", {}).get(provider)
         user_url = state.get("user_base_urls", {}).get(provider)
@@ -267,6 +275,11 @@ async def llm_executor_agent(state: AgentState) -> AgentState:
         state["execution_error"] = None
         logger.info("LLM execution success", tokens_in=result["tokens_input"], tokens_out=result["tokens_output"], latency_ms=result["latency_ms"])
     except LLMProviderError as e:
+        print("\n===== LLMProviderError =====")
+        print("Provider:", provider)
+        print("Model   :", model)
+        print("Error   :", str(e))
+        print("============================")
         logger.error("LLM provider error", provider=provider, error=str(e))
         state["execution_error"] = str(e)
         state["retry_count"] = retry_count + 1
