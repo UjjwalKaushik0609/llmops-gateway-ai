@@ -72,11 +72,7 @@ services:
       - "8001:8001"
     networks:
       - llmops-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/api/v1/heartbeat"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+    
 
   # ── FastAPI Backend ──────────────────────────────────────────────────────────
   api:
@@ -102,7 +98,7 @@ services:
       redis:
         condition: service_healthy
       chromadb:
-        condition: service_healthy
+        condition: service_started
     networks:
       - llmops-network
     volumes:
@@ -155,6 +151,23 @@ services:
       - llmops-network
     depends_on:
       - prometheus
+  
+
+  #── Frontend ───────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: llmops-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - llmops-network
 
   # ── Nginx Reverse Proxy (optional) ───────────────────────────────────────────
   nginx:
